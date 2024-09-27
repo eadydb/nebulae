@@ -15,12 +15,14 @@ const (
 	Suffix     = "deps.txt"
 )
 
+// MavenTxt maven dependency 层级关系
 type MavenTxt struct {
 	PTxt  string
 	Txt   string
 	Depth int
 }
 
+// DependencyTxt maven dependency tree
 type DependencyTxt struct {
 	Project string
 	Txts    []MavenTxt
