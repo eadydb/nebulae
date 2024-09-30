@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
+	"strings"
 
 	"github.com/eadydb/nebulae/pkg/repository"
 	"gorm.io/gorm"
@@ -13,7 +15,7 @@ type IRepository interface {
 	SaveRepository(repository Repository) error
 	UpdateRepository(language, dir string, id int) error
 	FindRepositories(page, limit int, language string) ([]GitlabRepository, error)
-	GitlabRepositoryById(id int) (*GitlabRepository, error)
+	GetRepositoryById(id int) (*GitlabRepository, error)
 	ExixtsRepository(id []int) ([]int, error)
 }
 
@@ -41,7 +43,7 @@ func (r *RepositoryService) SaveRepository(repository Repository) error {
 }
 
 func (r *RepositoryService) UpdateRepository(language, dir string, id int) error {
-	err := r.Db.Exec(fmt.Sprintf("update t_gitlab_repository set language = '%s', dir = '%s' where id = %d", language, dir, id)).Error
+	err := r.Db.Exec(fmt.Sprintf("update t_gitlab_repository set language = '%s', workspace_dir = '%s' where id = %d", language, dir, id)).Error
 	if err != nil {
 		slog.Error("update gitlab repository language failed", slog.String("err", err.Error()), slog.Int("id", id), slog.String("language", language))
 		return err
@@ -51,7 +53,11 @@ func (r *RepositoryService) UpdateRepository(language, dir string, id int) error
 
 func (r *RepositoryService) FindRepositories(page, limit int, language string) ([]GitlabRepository, error) {
 	var repositories []GitlabRepository
-	err := r.Db.Raw(fmt.Sprintf("select * from t_gitlab_repository where language = '%s' limit %d offset %d order by id", language, page, limit)).Scan(&repositories).Error
+	sql := fmt.Sprintf("select * from t_gitlab_repository limit %d offset %d order by id", page, limit)
+	if language != "" {
+		sql = fmt.Sprintf("select * from t_gitlab_repository where language match_phrase '%s' limit %d offset %d order by id", language, page, limit)
+	}
+	err := r.Db.Raw(sql).Scan(&repositories).Error
 	if err != nil {
 		slog.Error("find gitlab repositories failed", slog.String("err", err.Error()), slog.Int("page", page), slog.Int("limit", limit), slog.String("language", language))
 		return nil, err
@@ -59,7 +65,7 @@ func (r *RepositoryService) FindRepositories(page, limit int, language string) (
 	return repositories, nil
 }
 
-func (r *RepositoryService) GitlabRepositoryById(id int) (*GitlabRepository, error) {
+func (r *RepositoryService) GetRepositoryById(id int) (*GitlabRepository, error) {
 	var repository GitlabRepository
 	err := r.Db.Raw(fmt.Sprintf("select * from t_gitlab_repository where id = %d", id)).Scan(&repository).Error
 	if err != nil {
@@ -69,9 +75,9 @@ func (r *RepositoryService) GitlabRepositoryById(id int) (*GitlabRepository, err
 	return &repository, nil
 }
 
-func (r *RepositoryService) ExixtsRepository(ids []int) ([]int, error) {
+func (r *RepositoryService) ExixtsRepository(ids []string) ([]int, error) {
 	var exists []int
-	err := r.Db.Raw(fmt.Sprintf("select id from t_gitlab_repository where id in (%v)", ids)).Scan(&exists).Error
+	err := r.Db.Raw(fmt.Sprintf("select id from t_gitlab_repository where id in (%s)", strings.Join(ids, ","))).Scan(&exists).Error
 	if err != nil {
 		slog.Error("find gitlab repository by ids failed", slog.String("err", err.Error()), slog.Any("ids", ids))
 		return nil, err
@@ -80,9 +86,9 @@ func (r *RepositoryService) ExixtsRepository(ids []int) ([]int, error) {
 }
 
 func saveRepository(ctx context.Context, repositories []Repository) error {
-	ids := make([]int, 0)
+	ids := make([]string, 0)
 	for _, repository := range repositories {
-		ids = append(ids, repository.Id)
+		ids = append(ids, strconv.Itoa(repository.Id))
 	}
 	repoService := newRepositoryService(ctx)
 	existsIds, err := repoService.ExixtsRepository(ids)

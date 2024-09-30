@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS t_gitlab_repository (
+    id INT COMMENT "Repository ID",
+    name VARCHAR(255) COMMENT "Repository name",
+    path VARCHAR(255) COMMENT "Repository path",
+    path_with_namespace VARCHAR(255) COMMENT "Repository path with namespace",
+    default_branch VARCHAR(100) COMMENT "Default branch of the repository",
+    language VARCHAR(50) COMMENT "Primary programming language of the repository",
+    archived BOOLEAN COMMENT "Whether the repository is archived",
+    http_url_to_repo VARCHAR(255) COMMENT "HTTP URL to the repository",
+    web_url VARCHAR(255) COMMENT "Web URL of the repository",
+    last_activity_at DATETIMEV2 COMMENT "Timestamp of the last activity in the repository",
+    created_at DATETIMEV2 COMMENT "Timestamp when the repository was created",
+    visibility VARCHAR(50) COMMENT "Visibility level of the repository",
+    description TEXT COMMENT "Description of the repository",
+    creator_id INT COMMENT "ID of the repository creator",
+    namespace_id INT COMMENT "ID of the namespace",
+    namespace_name VARCHAR(255) COMMENT "Name of the namespace",
+    namespace_path VARCHAR(255) COMMENT "Path of the namespace",
+    namespace_kind VARCHAR(50) COMMENT "Kind of the namespace",
+    namespace_full_path VARCHAR(255) COMMENT "Full path of the namespace",
+    namespace_parent_id INT COMMENT "Parent ID of the namespace",
+    workspace_dir TEXT COMMENT "Workspace directory of the repository",
+    INDEX idx_request_name (`name`) USING INVERTED,
+    INDEX idx_request_language (`language`) USING INVERTED PROPERTIES("parser" = "unicode","support_phrase"="true"), 
+    INDEX idx_request_path_with_namespace (`path_with_namespace`) USING INVERTED PROPERTIES("parser" = "unicode","support_phrase"="true")
+) engine = OLAP UNIQUE KEY(`id`)
+DISTRIBUTED BY HASH(`id`) BUCKETS 1;

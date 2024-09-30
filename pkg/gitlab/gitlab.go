@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/eadydb/nebulae/pkg/utils/network"
-	"github.com/go-git/go-git/config"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
@@ -27,6 +26,7 @@ type GitlabProjects struct {
 	Membership bool
 	Page       int
 	PerPage    int
+	Recursive  bool
 }
 
 func NewGitlab(ctx context.Context, privateToken, domain string) *Gitlab {
@@ -53,6 +53,11 @@ func (g *Gitlab) ScanGitlabHub(projects *GitlabProjects) error {
 		slog.Error("save gitlab repository failed", slog.String("err", err.Error()))
 		return err
 	}
+	if !projects.Recursive {
+		slog.Info("End Sweep gitlab repository", slog.Any("projects", projects))
+		return nil
+	}
+
 	if len(repositories) < projects.PerPage {
 		return nil
 	}
@@ -74,99 +79,79 @@ func (g *Gitlab) SelectGitlabRepository(projects *GitlabProjects) ([]Repository,
 }
 
 // Clone clone gitlab repository
-func (g *Gitlab) Clone(repository GitlabRepository, hubDir string) (string, error) {
-	dir := hubDir + "/" + repository.PathWithNamespace
-	var repo *git.Repository
-	var err error
-	if existsLocalRepository(dir) {
-		repo, err = git.PlainOpen(dir)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		url := strings.ReplaceAll(repository.HttpUrlToRepo, "http://", "https://")
-		repo, err = git.PlainClone(dir, false, &git.CloneOptions{
-			URL: url,
-			Auth: &http.BasicAuth{
-				Username: g.Username,
-				Password: g.PrivateToken,
-			},
-		})
-		if err != nil {
-			slog.Error("Gitlab Repository failed", slog.String("err", err.Error()), slog.String("url", repository.HttpUrlToRepo))
-			return "", err
-		}
-	}
-	wt, err := repo.Worktree()
-	if err != nil {
-		slog.Error("Get Gitlab Repository Worktree failed", slog.String("err", err.Error()), slog.String("url", repository.HttpUrlToRepo))
-		return "", err
-	}
-	ref, err := repo.Head()
-	if err != nil {
-		slog.Error("Get Gitlab Repository HEAD failed", slog.String("err", err.Error()), slog.String("url", repository.HttpUrlToRepo))
-		return "", err
-	}
+func (g *Gitlab) Clone(repository *GitlabRepository, hubDir string) error {
+	directory := hubDir + "/" + repository.PathWithNamespace
 
-	create := ref.Name().Short() != repository.DefaultBranch
-	if create {
-		branchRefName := plumbing.NewBranchReferenceName(repository.DefaultBranch)
-		branchCoOpts := git.CheckoutOptions{
-			Branch: plumbing.ReferenceName(branchRefName),
-			Force:  true,
-		}
-		if err := wt.Checkout(&branchCoOpts); err != nil {
-			mirrorRemoteBranchRefSpec := fmt.Sprintf("refs/heads/%s:refs/heads/%s", repository.DefaultBranch, repository.DefaultBranch)
-			if err = g.fetchOrigin(repo, mirrorRemoteBranchRefSpec); err != nil {
-				slog.Error("Fetch Remote Branch failed", slog.String("err", err.Error()), slog.String("url", repository.HttpUrlToRepo), slog.String("branch", repository.DefaultBranch))
-				return dir, err
+	// Check if the directory already exists and contains a git repository
+	if _, err := os.Stat(directory); err == nil {
+		// Directory exists, try to open the repository
+		repo, err := git.PlainOpen(directory)
+		if err == nil {
+			// Repository exists, perform a pull
+			if err := g.PullRepository(repo, repository.DefaultBranch, repository.Name); err != nil {
+				return err
 			}
-
-			if err = wt.Checkout(&branchCoOpts); err != nil {
-				slog.Error("Checkout Remote Branch failed", slog.String("err", err.Error()), slog.String("url", repository.HttpUrlToRepo), slog.String("branch", repository.DefaultBranch))
-				return dir, err
-			}
-
+			return g.UpdateRepositoryLanguage(repository.Id, directory)
 		}
-		slog.Info("Checkout Remote Branch success", slog.String("branch", repository.DefaultBranch), slog.String("url", repository.HttpUrlToRepo))
 	}
 
-	return dir, nil
-}
-
-func (g *Gitlab) fetchOrigin(repo *git.Repository, refSpecStr string) error {
-	remote, err := repo.Remote("origin")
-	if err != nil {
-		slog.Error("获取远程分支Origin失败", slog.String("err", err.Error()))
+	// Directory doesn't exist or is not a git repository, perform a clone
+	url := strings.ReplaceAll(repository.HttpUrlToRepo, "http://", "https://")
+	if err := g.CloneRepository(url, repository.DefaultBranch, directory); err != nil {
 		return err
 	}
 
-	var refSpecs []config.RefSpec
-	if refSpecStr != "" {
-		refSpecs = []config.RefSpec{config.RefSpec(refSpecStr)}
-	}
+	return g.UpdateRepositoryLanguage(repository.Id, directory)
+}
 
-	if err = remote.Fetch(&git.FetchOptions{
-		RefSpecs: refSpecs,
+func (g *Gitlab) CloneRepository(url, branch, directory string) error {
+	// Clone options
+	cloneOptions := &git.CloneOptions{
+		URL:           url,
+		Progress:      os.Stdout,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		SingleBranch:  true,
 		Auth: &http.BasicAuth{
 			Username: g.Username,
 			Password: g.PrivateToken,
 		},
-	}); err != nil {
-		if err == git.NoErrAlreadyUpToDate {
-			slog.Info("refs already up to date")
-		} else {
-			return fmt.Errorf("fetch origin failed: %v", err)
-		}
 	}
 
+	// Perform the clone
+	_, err := git.PlainClone(directory, false, cloneOptions)
+	if err != nil {
+		return fmt.Errorf("failed to clone repository: %w", err)
+	}
+
+	slog.Info("Cloned Successfully ", slog.String("branch", branch), slog.String("url", url), slog.String("directory", directory))
 	return nil
 }
 
-// existsLocalRepository check if the repository exists
-func existsLocalRepository(repository string) bool {
-	if _, err := os.Stat(repository); err == nil {
-		return true
+func (g *Gitlab) PullRepository(repo *git.Repository, branch, name string) error {
+	// Get the working directory for the repository
+	w, err := repo.Worktree()
+	if err != nil {
+		return fmt.Errorf("failed to get worktree: %w", err)
 	}
-	return false
+
+	// Pull the latest changes from the remote
+	err = w.Pull(&git.PullOptions{
+		RemoteName:    "origin",
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		Progress:      os.Stdout,
+		Auth: &http.BasicAuth{
+			Username: g.Username,
+			Password: g.PrivateToken,
+		},
+	})
+	if err != nil {
+		if err == git.NoErrAlreadyUpToDate {
+			slog.Info("Repository is already up to date", slog.String("branch", branch), slog.String("repository", name))
+			return nil
+		}
+		return fmt.Errorf("failed to pull latest changes: %w", err)
+	}
+
+	slog.Info("Successfully pulled latest changes", slog.String("branch", branch), slog.String("repository", name))
+	return nil
 }
