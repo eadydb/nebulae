@@ -60,7 +60,3 @@ func loadRawConfig(p string) ([]json.RawMessage, error) {
 	}
 	return raws, nil
 }
-
-type MetaObject interface {
-	GetName() string
-}

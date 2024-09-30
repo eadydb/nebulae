@@ -3,6 +3,8 @@ package nebulaectl
 import (
 	"context"
 
+	"github.com/eadydb/nebulae/pkg/cmd/nebulaectl/gitlabctl"
+	"github.com/eadydb/nebulae/pkg/cmd/nebulaectl/mavenctl"
 	"github.com/spf13/cobra"
 )
 
@@ -16,6 +18,9 @@ func NewCommand(ctx context.Context) *cobra.Command {
 			return cmd.Help()
 		},
 	}
-	cmd.AddCommand()
+	cmd.AddCommand(
+		gitlabctl.NewGitlabCommand(ctx),
+		mavenctl.NewMavenCommand(ctx),
+	)
 	return cmd
 }

@@ -53,9 +53,9 @@ func (r *RepositoryService) UpdateRepository(language, dir string, id int) error
 
 func (r *RepositoryService) FindRepositories(page, limit int, language string) ([]GitlabRepository, error) {
 	var repositories []GitlabRepository
-	sql := fmt.Sprintf("select * from t_gitlab_repository limit %d offset %d order by id", page, limit)
+	sql := fmt.Sprintf("select * from t_gitlab_repository limit %d offset %d order by id", limit, (page-1)*limit)
 	if language != "" {
-		sql = fmt.Sprintf("select * from t_gitlab_repository where language match_phrase '%s' limit %d offset %d order by id", language, page, limit)
+		sql = fmt.Sprintf("select * from t_gitlab_repository where language match_phrase '%s' limit %d offset %d order by id", language, limit, (page-1)*limit)
 	}
 	err := r.Db.Raw(sql).Scan(&repositories).Error
 	if err != nil {

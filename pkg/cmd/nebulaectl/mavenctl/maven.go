@@ -1,4 +1,4 @@
-package nebulaectl
+package mavenctl
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewGitlabCommand(ctx context.Context) *cobra.Command {
+func NewMavenCommand(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Args:          cobra.NoArgs,
-		Use:           "gitlab [command]",
+		Use:           "maven [command]",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {

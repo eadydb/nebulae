@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/eadydb/nebulae/pkg/utils/network"
 	"github.com/go-git/go-git/v5"
@@ -29,6 +30,14 @@ type GitlabProjects struct {
 	Recursive  bool
 }
 
+type CloneProjects struct {
+	Page         int
+	PerPage      int
+	Recursive    bool
+	Language     string
+	WorkspaceDir string
+}
+
 func NewGitlab(ctx context.Context, privateToken, domain string) *Gitlab {
 	return &Gitlab{
 		PrivateToken: privateToken,
@@ -40,7 +49,7 @@ func NewGitlab(ctx context.Context, privateToken, domain string) *Gitlab {
 
 // ScanGitlabHub scan gitlab hub
 func (g *Gitlab) ScanGitlabHub(projects *GitlabProjects) error {
-	repositories, err := g.SelectGitlabRepository(projects)
+	repositories, err := g.GetGitlabRepository(projects)
 	if err != nil {
 		slog.Error("select gitlab repository failed", slog.String("err", err.Error()))
 		return err
@@ -65,8 +74,8 @@ func (g *Gitlab) ScanGitlabHub(projects *GitlabProjects) error {
 	return g.ScanGitlabHub(projects)
 }
 
-// SelectGitlabRepository select gitlab repository
-func (g *Gitlab) SelectGitlabRepository(projects *GitlabProjects) ([]Repository, error) {
+// GetGitlabRepository select gitlab repository
+func (g *Gitlab) GetGitlabRepository(projects *GitlabProjects) ([]Repository, error) {
 	params := make(map[string]string)
 	params["private_token"] = g.PrivateToken
 	params["simple"] = strconv.FormatBool(projects.Simple)
@@ -76,6 +85,37 @@ func (g *Gitlab) SelectGitlabRepository(projects *GitlabProjects) ([]Repository,
 
 	var repositories []Repository
 	return network.Get(g.Domain, "/api/v4/projects", "", params, repositories)
+}
+
+func (g *Gitlab) CloneGitlabHub(projects *CloneProjects) error {
+	repositories, err := newRepositoryService(g.Ctx).FindRepositories(projects.Page, projects.PerPage, projects.Language)
+	if err != nil {
+		slog.Error("find repositories failed", slog.String("err", err.Error()))
+		return err
+	}
+	if len(repositories) == 0 {
+		slog.Info("find repositories not exists", slog.Any("projects", projects))
+		return nil
+	}
+	var wg sync.WaitGroup
+	maxConcurrent := 2
+	sem := make(chan struct{}, maxConcurrent)
+
+	for _, repository := range repositories {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(repo GitlabRepository) {
+			g.Clone(&repo, projects.WorkspaceDir)
+			<-sem
+		}(repository)
+	}
+	wg.Wait()
+
+	if len(repositories) < projects.PerPage {
+		return nil
+	}
+	projects.Page++
+	return g.CloneGitlabHub(projects)
 }
 
 // Clone clone gitlab repository

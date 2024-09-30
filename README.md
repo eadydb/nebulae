@@ -27,3 +27,15 @@ Nebulae generates these visualization charts through the following steps:
 - Promotes team collaboration: Offers team members a shared view of the system, facilitating communication and collaboration.
 
 Nebulae is a powerful tool that can help development teams better understand, manage, and optimize their software systems.
+
+## Command
+
+### Grpc protoc
+
+```
+protoc -I=proto \
+    --go_out=proto --go_opt=paths=source_relative \
+    --go-grpc_out=proto --go-grpc_opt=paths=source_relative \
+    --grpc-gateway_out=proto --grpc-gateway_opt=paths=source_relative \
+    proto/v1/nebulae.proto
+```
