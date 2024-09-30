@@ -10,41 +10,27 @@ import (
 
 // CommonLanguages maps common programming languages to their file extensions or identifiers
 var CommonLanguages = map[string][]string{
-	"Python":       {".py"},
-	"JavaScript":   {".js", ".jsx", ".mjs"},
-	"TypeScript":   {".ts", ".tsx"},
-	"Java":         {".java"},
-	"C++":          {".cpp", ".cxx", ".cc", ".h", ".hpp"},
-	"C":            {".c", ".h"},
-	"C#":           {".cs"},
-	"Go":           {".go"},
-	"Ruby":         {".rb"},
-	"PHP":          {".php"},
-	"Swift":        {".swift"},
-	"Kotlin":       {".kt", ".kts"},
-	"Rust":         {".rs"},
-	"Scala":        {".scala"},
-	"Haskell":      {".hs"},
-	"Lua":          {".lua"},
-	"Shell":        {".sh", ".bash"},
-	"PowerShell":   {".ps1"},
-	"SQL":          {".sql"},
-	"R":            {".r", ".R"},
-	"MATLAB":       {".m"},
-	"Perl":         {".pl", ".pm"},
-	"Groovy":       {".groovy"},
-	"Dart":         {".dart"},
-	"Elixir":       {".ex", ".exs"},
-	"Clojure":      {".clj", ".cljs"},
-	"Objective-C":  {".m", ".mm"},
-	"Visual Basic": {".vb"},
-	"Assembly":     {".asm", ".s"},
-	"HTML":         {".html", ".htm"},
-	"CSS":          {".css"},
-	"XML":          {".xml"},
-	"JSON":         {".json"},
-	"YAML":         {".yml", ".yaml"},
-	"Markdown":     {".md", ".markdown"},
+	"Python":      {".py"},
+	"JavaScript":  {".js", ".jsx", ".mjs"},
+	"TypeScript":  {".ts", ".tsx"},
+	"Java":        {".java"},
+	"C++":         {".cpp", ".cxx", ".cc", ".h", ".hpp"},
+	"C":           {".c", ".h"},
+	"Go":          {".go"},
+	"Kotlin":      {".kt", ".kts"},
+	"Rust":        {".rs"},
+	"Scala":       {".scala"},
+	"Lua":         {".lua"},
+	"Shell":       {".sh", ".bash"},
+	"SQL":         {".sql"},
+	"R":           {".r", ".R"},
+	"Groovy":      {".groovy"},
+	"Objective-C": {".m", ".mm"},
+	"Assembly":    {".asm", ".s"},
+	"HTML":        {".html", ".htm"},
+	"Markdown":    {".md", ".markdown"},
+	"Maven":       {"pom.xml"},
+	"Gradle":      {"build.gradle", "settings.gradle"},
 }
 
 // scanDirectory scans a directory for files with specific names or extensions
@@ -96,11 +82,8 @@ func (g *Gitlab) GetProjectLanguage(dir string) (string, error) {
 		}
 		for _, found := range result {
 			if found {
-				for _, lang := range languages {
-					if language != lang {
-						languages = append(languages, language)
-					}
-				}
+				languages = append(languages, language)
+				break
 			}
 		}
 	}
