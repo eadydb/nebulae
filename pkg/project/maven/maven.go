@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/eadydb/nebulae/pkg/utils/cmd"
-	"github.com/eadydb/nebulae/pkg/walk"
+	"github.com/eadydb/nebulae/pkg/utils/walk"
 )
 
 type Maven struct {

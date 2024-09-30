@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package proto;
+option go_package="github.com/eadydb/nebulae/proto";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+import public "enums/enums.proto";
+
+service NebulaeService {
+    
+    rpc HealthCheck(google.protobuf.Empty) returns (HealthCheckResponse) {
+        option (google.api.http) = {
+            get: "/v1/health"
+        };
+    }
+
+}
+
+
+message HealthCheckResponse {
+    string status = 1;
+}

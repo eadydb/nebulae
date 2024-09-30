@@ -6,32 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-// CommonLanguages maps common programming languages to their file extensions or identifiers
-var CommonLanguages = map[string][]string{
-	"Python":      {".py"},
-	"JavaScript":  {".js", ".jsx", ".mjs"},
-	"TypeScript":  {".ts", ".tsx"},
-	"Java":        {".java"},
-	"C++":         {".cpp", ".cxx", ".cc", ".h", ".hpp"},
-	"C":           {".c", ".h"},
-	"Go":          {".go"},
-	"Kotlin":      {".kt", ".kts"},
-	"Rust":        {".rs"},
-	"Scala":       {".scala"},
-	"Lua":         {".lua"},
-	"Shell":       {".sh", ".bash"},
-	"SQL":         {".sql"},
-	"R":           {".r", ".R"},
-	"Groovy":      {".groovy"},
-	"Objective-C": {".m", ".mm"},
-	"Assembly":    {".asm", ".s"},
-	"HTML":        {".html", ".htm"},
-	"Markdown":    {".md", ".markdown"},
-	"Maven":       {"pom.xml"},
-	"Gradle":      {"build.gradle", "settings.gradle"},
-}
+	"github.com/eadydb/nebulae/pkg/consts"
+)
 
 // scanDirectory scans a directory for files with specific names or extensions
 func scanDirectory(dir string, targets []string) (map[string]bool, error) {
@@ -75,7 +52,7 @@ func scanDirectory(dir string, targets []string) (map[string]bool, error) {
 
 func (g *Gitlab) GetProjectLanguage(dir string) (string, error) {
 	languages := make([]string, 0)
-	for language, targets := range CommonLanguages {
+	for language, targets := range consts.CommonLanguages {
 		result, err := scanDirectory(dir, targets)
 		if err != nil {
 			return "", err

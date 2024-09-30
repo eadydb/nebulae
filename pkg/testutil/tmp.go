@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/eadydb/nebulae/pkg/walk"
+	"github.com/eadydb/nebulae/pkg/utils/walk"
 )
 
 // TempFile creates a temporary file with a given content. Returns the file name.

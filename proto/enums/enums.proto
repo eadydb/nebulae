@@ -1,0 +1,10 @@
+syntax="proto3";
+
+package proto.enums;
+option go_package="github.com/eadydb/nebulae/proto/enums";
+
+
+enum StatusCode {
+  OK = 0;
+  FAILED = 500;
+}
