@@ -100,16 +100,35 @@ func (g *Gitlab) CloneGitlabHub(projects *CloneProjects) error {
 	var wg sync.WaitGroup
 	maxConcurrent := 2
 	sem := make(chan struct{}, maxConcurrent)
+	errChan := make(chan error, len(repositories))
 
 	for _, repository := range repositories {
 		wg.Add(1)
 		sem <- struct{}{}
 		go func(repo GitlabRepository) {
-			g.Clone(&repo, projects.WorkspaceDir)
-			<-sem
+			defer wg.Done()
+			defer func() {
+				if r := recover(); r != nil {
+					errChan <- fmt.Errorf("panic in goroutine: %v", r)
+				}
+				<-sem
+			}()
+			if err := g.Clone(&repo, projects.WorkspaceDir); err != nil {
+				errChan <- fmt.Errorf("task execution failed: %w", err)
+			}
 		}(repository)
 	}
 	wg.Wait()
+	close(errChan)
+	// Collect all errors
+	var errs []error
+	for err := range errChan {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		slog.Error("encountered %d errors during execution:", slog.Any("count", len(errs)), slog.Any("errors", errs))
+	}
 
 	if len(repositories) < projects.PerPage {
 		return nil

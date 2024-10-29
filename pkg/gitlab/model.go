@@ -50,4 +50,5 @@ type GitlabRepository struct {
 	NamespaceKind     string `gorm:"cloumn:namespace_kind"`      // namespace kind
 	NamespaceFullPath string `gorm:"cloumn:namespace_full_path"` // namespace full path
 	NamespaceParentId int    `gorm:"cloumn:namespace_parent_id"` // namespace parent id
+	WorkspaceDir      string `gorm:"cloumn:workspace_dir"`       // workspace dir
 }
