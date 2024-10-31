@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+
+	"github.com/eadydb/nebulae/pkg/utils/walk"
 )
 
 type Depndency struct {
@@ -53,4 +55,14 @@ func ParsePOMContent(content []byte, filePath string) (*POM, error) {
 	}
 
 	return &pom, nil
+}
+
+// LoadingPomFile 获取pom.xml文件
+func LoadingPomFile(path string) ([]string, error) {
+	txtPaths, err := walk.From(path).CollectFilterPaths("pom.xml")
+	if err != nil {
+		slog.Error("loading mvn txt file failed", slog.String("dir", path), slog.String("err", err.Error()), slog.String("fileName", "pom.xml"))
+		return nil, err
+	}
+	return txtPaths, nil
 }

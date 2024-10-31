@@ -29,8 +29,8 @@ type DependencyTxt struct {
 	Path    string
 }
 
-// parseMavenDependencyTxt 解析mvn dependency:tree 命令生成的txt文件
-func parseMavenDependencyTxt(fileName string) (*DependencyTxt, error) {
+// ParseMavenDependencyTxt 解析mvn dependency:tree 命令生成的txt文件
+func ParseMavenDependencyTxt(fileName string) (*DependencyTxt, error) {
 	slog.Info("start analyize maven dependency tree", slog.String("fileName", fileName))
 	if fileName == "" {
 		slog.Error("maven dependency tree file name is empty")

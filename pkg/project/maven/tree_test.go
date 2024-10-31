@@ -6,7 +6,7 @@ import (
 )
 
 func TestParseMavenDependencyTxt(t *testing.T) {
-	deps, err := parseMavenDependencyTxt("deps.txt")
+	deps, err := ParseMavenDependencyTxt("deps.txt")
 	if err != nil {
 		t.Error(err)
 	}

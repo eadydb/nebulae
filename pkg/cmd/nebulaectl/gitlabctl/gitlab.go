@@ -39,7 +39,7 @@ func initDriver(ctx context.Context, driver *config.Driver) {
 		repository.GormConn = conn
 	}
 	if driver.Neo4j != nil {
-		err := repository.NewNeo4jDriver(driver.Neo4j.Host, driver.Neo4j.Username, driver.Neo4j.Password, driver.Neo4j.Port).Connect()
+		err := repository.NewNeo4jDriver(ctx, driver.Neo4j.Host, driver.Neo4j.Username, driver.Neo4j.Password, driver.Neo4j.Port).Connect()
 		if err != nil {
 			slog.Error("connect neo4j failed", slog.String("err", err.Error()))
 			panic(err)
